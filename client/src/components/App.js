@@ -9,9 +9,13 @@ function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetch("/check_session").then((response) => {
+    fetch("/check_session", {
+      credentials: "include", // Ensure session cookie is sent
+    }).then((response) => {
       if (response.ok) {
         response.json().then((user) => setUser(user));
+      } else {
+        setUser(null);
       }
     });
   }, []);
@@ -22,6 +26,7 @@ function App() {
 
   function handleLogout() {
     setUser(null);
+    // Optionally: implement a logout route in Flask and call it here
   }
 
   return (
@@ -43,3 +48,4 @@ function App() {
 }
 
 export default App;
+

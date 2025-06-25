@@ -2,6 +2,7 @@ import { useState } from "react";
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState("");
+  const [error, setError] = useState("");
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -10,10 +11,16 @@ function Login({ onLogin }) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ username }),
+      credentials: "include", // Needed for cookies/sessions
+      body: JSON.stringify({ username: username.trim() }),
     }).then((r) => {
       if (r.ok) {
-        r.json().then((user) => onLogin(user));
+        r.json().then((user) => {
+          onLogin(user);
+          setError("");
+        });
+      } else {
+        setError("Login failed. Please check your username.");
       }
     });
   }
@@ -29,6 +36,7 @@ function Login({ onLogin }) {
         onChange={(e) => setUsername(e.target.value)}
       />
       <button type="submit">Login</button>
+      {error && <p style={{ color: "red" }}>{error}</p>}
     </form>
   );
 }
