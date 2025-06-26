@@ -1,7 +1,7 @@
-from flask import Flask, make_response, jsonify, request, session
+
+from flask import Flask, make_response, request, session
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
-
 from models import db, Article, User
 
 app = Flask(__name__)
@@ -14,11 +14,11 @@ migrate = Migrate(app, db)
 db.init_app(app)
 api = Api(app)
 
-# ---------- Existing Routes ----------
+# ---------- Resources ----------
 
 class ClearSession(Resource):
     def delete(self):
-        session['page_views'] = None
+        session['page_views'] = 0
         session['user_id'] = None
         return {}, 204
 
@@ -29,27 +29,21 @@ class IndexArticle(Resource):
 
 class ShowArticle(Resource):
     def get(self, id):
-        session['page_views'] = 0 if not session.get('page_views') else session['page_views']
-        session['page_views'] += 1
-
+        session['page_views'] = session.get('page_views', 0) + 1
         if session['page_views'] <= 3:
-            article = Article.query.filter(Article.id == id).first()
-            article_json = jsonify(article.to_dict())
-            return make_response(article_json, 200)
-
+            article = Article.query.filter_by(id=id).first()
+            if article:
+                return article.to_dict(), 200
+            return {'message': 'Article not found'}, 404
         return {'message': 'Maximum pageview limit reached'}, 401
-
-# ---------- New Auth Routes ----------
 
 class Login(Resource):
     def post(self):
         username = request.get_json().get('username')
         user = User.query.filter_by(username=username).first()
-
         if user:
             session['user_id'] = user.id
             return user.to_dict(), 200
-
         return {}, 401
 
 class Logout(Resource):
@@ -62,10 +56,11 @@ class CheckSession(Resource):
         user_id = session.get('user_id')
         if user_id:
             user = db.session.get(User, user_id)
-            return user.to_dict(), 200
+            if user:
+                return user.to_dict(), 200
         return {}, 401
 
-# ---------- Resource Registration ----------
+# ---------- Register Resources ----------
 
 api.add_resource(ClearSession, '/clear')
 api.add_resource(IndexArticle, '/articles')
@@ -73,7 +68,6 @@ api.add_resource(ShowArticle, '/articles/<int:id>')
 api.add_resource(Login, '/login')
 api.add_resource(Logout, '/logout')
 api.add_resource(CheckSession, '/check_session')
-
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
